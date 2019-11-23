@@ -1,0 +1,9 @@
+{
+	"nb_sites":3,
+	"sites_addr":[
+		"localhost:3000",
+		"localhost:3001",
+		"localhost:3002"
+	]
+}
+		
