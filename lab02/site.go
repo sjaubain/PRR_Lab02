@@ -7,6 +7,7 @@ import (
 	"os"
 	"net"
 	"strconv"
+	"bufio"
 	"fmt"
 )
 
@@ -15,10 +16,16 @@ type Conf struct {
 	SITES_ADDR []string
 }
 	
+type siteChannel chan<- string
+
 var (
-	site_id int
+	siteId int
 	conf Conf
 	connectedTo []bool
+	connecting = make(chan siteChannel)
+	
+	in = make(chan string)
+	out = make(chan string)
 )
 
 /**
@@ -40,18 +47,37 @@ func main() {
 		log.Println("you have to provide a site id")
 		return
 	} else {
-		site_id, _ = strconv.Atoi(os.Args[1])
-		if !(0 <= site_id && site_id <= conf.NB_SITES) {
+		siteId, _ = strconv.Atoi(os.Args[1])
+		if !(0 <= siteId && siteId <= conf.NB_SITES) {
 			log.Println("invalid site id")
 			return
 		}	
 	}	
-
-	lookUp()
-	for {
-	}
+	
+	go listen()
+	go lookUp()
+	
+	// references to each site in order to process messages
+	sitesChannels := make(map[siteChannel]bool)
+	
 	// wait for all sites to be running (connected)
-	// TODO : applicative goroutine to listen to user commands
+	for len(sitesChannels) < conf.NB_SITES - 1 {
+		select {
+		case newChannel := <- connecting:
+			sitesChannels[newChannel] = true
+		}
+	}
+	
+	fmt.Println("\nall sites connected, now able to accept user commands")
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Println("Enter text: ")
+		msg, _ := reader.ReadString('\n')
+		
+		for site := range sitesChannels {
+			site <- msg 
+		}
+	}
 }
 
 func loadConfiguration() {
@@ -63,87 +89,66 @@ func loadConfiguration() {
 
 // try to connect to each site
 func lookUp() {
-	for id, site_addr := range conf.SITES_ADDR {
+	for id, _ := range conf.SITES_ADDR {
 		// should not connect to myself
-		if id != site_id {
-			conn, err := net.Dial("tcp", site_addr)
-			if err == nil {
-				connectedTo[id] = true
-				
-				// send its id
-				log.Println("i am connected to site " + strconv.Itoa(id))
-				fmt.Fprintln(conn, strconv.Itoa(site_id))
-			}
+		if id != siteId {
+			connectToSite(id)	
 		}
 	}
-	go listen()
 }
 
 func listen() {
-	listener, _ := net.Listen("tcp", conf.SITES_ADDR[site_id])
+
+	listener, _ := net.Listen("tcp", conf.SITES_ADDR[siteId])
 	
 	for {
 		conn, _ := listener.Accept()
-		
+
 		// receive id
-		buf := make([]byte, 1) 
+		buf := make([]byte, 256) 
 		_, _ = conn.Read(buf)
 		id, _ := strconv.Atoi(string(buf[0]))
 
 		if !connectedTo[id] {
-			_, _ = net.Dial("tcp", conf.SITES_ADDR[id]) // note : ignoring errors
-			log.Println("i am connected to site " + strconv.Itoa(id))
-			// go handleConn
+			connectToSite(id)	
 		}
+		
+		go reader(conn)
 	}
 }
 
-func handleConn(conn net.Conn) {
-	
-}
+func connectToSite(id int) {
 
-/*
-func connect(site_addr string) {
-	conn, err := net.Dial("tcp", site_addr)
+	conn, err := net.Dial("tcp", conf.SITES_ADDR[id])
+	
 	if err == nil {
-		// send id so that all sites listening can
-		// connect back
-		fmt.Fprintln(conn, strconv.Itoa(site_id))
-		go handleConn(conn)
+		connectedTo[id] = true
+		log.Println("i am connected to site " + strconv.Itoa(id))
+		
+		// send its id
+		fmt.Fprintln(conn, strconv.Itoa(siteId))
+		
+		go writer(conn)
 	}
 }
 
-func listen() {
-	listener, err := net.Listen("tcp", conf.SITES_ADDR[site_id])
-	if err != nil {
-		log.Fatal(err)
-	}
+func writer(conn net.Conn) {
+
+	ch := make(chan string)
+	connecting <- ch
 	
-	for i := 0; i < conf.NB_SITES; i++ {
-		conn, err := listener.Accept()
+	go func() {            
+		for msg := range ch {
+			fmt.Fprintln(conn, msg)
+		}
+	}()
+}
 
-		// new site connected
-		go handleConn(conn)
+func reader(conn net.Conn) {
+
+	input := bufio.NewScanner(conn)
+	for input.Scan() { 
+		fmt.Println("received : " + input.Text())
 	}
 }
 
-func handleConn(conn net.Conn) {
-	// receive id
-	buf := make([]byte, 256) 
-	_, _ = conn.Read(buf)
-	id, _ := strconv.Atoi(string(buf[0]))
-	
-	connectedSites[id] = true
-	log.Printf("site %d connected, waiting for following sites :\n%s", id, getAwaitingSites())
-	// connect back
-	connect(conf.SITES_ADDR[id])
-}
-
-func getAwaitingSites() string {
-	var ret string = "[ "
-	for i := 0; i < conf.NB_SITES; i++ {
-		if !connectedSites[i] {ret += strconv.Itoa(i) + " "}
-	}
-	return ret + "]"
-}
-*/
