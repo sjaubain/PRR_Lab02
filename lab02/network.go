@@ -1,4 +1,4 @@
-package main
+package network
 
 import (
 	"bufio"
@@ -8,8 +8,6 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"time"
-	"PRR_Lab02/lab02/algoCR"
 )
 
 type Conf struct {
@@ -24,11 +22,10 @@ var (
 	conf        Conf
 	connectedTo []bool
 	connecting  = make(chan siteChannel)
-	// references to each site in order to process messages
-	sitesChannels = make(map[int]siteChannel)
-)
 
-var acr algoCR
+	in  = make(chan string)
+	out = make(chan string)
+)
 
 /**
  * each time a process is strated, it tries to connect to each other
@@ -43,7 +40,7 @@ func main() {
 
 	// list of sites on wich the process is connected
 	connectedTo = make([]bool, conf.NB_SITES)
-	
+
 	// parse command line args
 	if len(os.Args) == 1 {
 		log.Println("you have to provide a site id")
@@ -55,36 +52,30 @@ func main() {
 			return
 		}
 	}
-	
-	// Init algoCR
-    acr = algoCR.New(0, 0)
-	
+
 	go listen()
 	go lookUp()
 
+	// references to each site in order to process messages
+	sitesChannels := make(map[siteChannel]bool)
+
 	// wait for all sites to be running (connected)
-	for i := 0; i < conf.NB_SITES-1; i++ {
+	for len(sitesChannels) < conf.NB_SITES-1 {
 		select {
-		case <-connecting:
-			
+		case newChannel := <-connecting:
+			sitesChannels[newChannel] = true
 		}
 	}
 
 	fmt.Println("\nall sites connected, now able to accept user commands")
 	reader := bufio.NewReader(os.Stdin)
 	for {
-	
 		fmt.Println("Enter text: ")
 		msg, _ := reader.ReadString('\n')
 
-		/*
-		for i := range sitesChannels {
-			sitesChannels[i] <- msg
+		for site := range sitesChannels {
+			site <- msg
 		}
-		*/
-		
-		// test : juste envoyer au site 1
-		acr.SendMsg(sitesChannels[1], "Bonsoir")
 	}
 }
 
@@ -121,8 +112,7 @@ func listen() {
 			connectToSite(id)
 		}
 
-		go reader(conn, id)
-		time.Sleep(1000)
+		go reader(conn)
 	}
 }
 
@@ -137,14 +127,13 @@ func connectToSite(id int) {
 		// send its id
 		fmt.Fprintln(conn, strconv.Itoa(siteId))
 
-		writer(conn, id)
+		go writer(conn)
 	}
 }
 
-func writer(conn net.Conn, id int) {
+func writer(conn net.Conn) {
 
 	ch := make(chan string)
-	sitesChannels[id] = ch
 	connecting <- ch
 
 	go func() {
@@ -154,13 +143,10 @@ func writer(conn net.Conn, id int) {
 	}()
 }
 
-func reader(conn net.Conn, id int) {
+func reader(conn net.Conn) {
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
-		if input.Text() != ""{
-			acr.MsgHandle(sitesChannels[id], "j'ai bien recu ton message")
-			//fmt.Println("received : " + input.Text())
-		}
+		fmt.Println("received : " + input.Text())
 	}
 }
