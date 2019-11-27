@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"time"
 )
 
 type Conf struct {
@@ -23,9 +24,8 @@ var (
 	connectedTo []bool
 	connecting  = make(chan siteChannel)
 
-	in  = make(chan string)
-	out = make(chan string)
-)
+
+	sitesChannels = make(map[siteChannel]bool))
 
 /**
  * each time a process is strated, it tries to connect to each other
@@ -57,7 +57,7 @@ func main() {
 	go lookUp()
 
 	// references to each site in order to process messages
-	sitesChannels := make(map[siteChannel]bool)
+
 
 	// wait for all sites to be running (connected)
 	for len(sitesChannels) < conf.NB_SITES-1 {
@@ -72,6 +72,7 @@ func main() {
 	for {
 		fmt.Println("Enter text: ")
 		msg, _ := reader.ReadString('\n')
+
 
 		for site := range sitesChannels {
 			site <- msg
@@ -112,7 +113,8 @@ func listen() {
 			connectToSite(id)
 		}
 
-		go reader(conn)
+		go reader(conn, id)
+		time.Sleep(1000)
 	}
 }
 
@@ -127,7 +129,7 @@ func connectToSite(id int) {
 		// send its id
 		fmt.Fprintln(conn, strconv.Itoa(siteId))
 
-		go writer(conn)
+		writer(conn)
 	}
 }
 
@@ -143,10 +145,13 @@ func writer(conn net.Conn) {
 	}()
 }
 
-func reader(conn net.Conn) {
+func reader(conn net.Conn, id int) {
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
-		fmt.Println("received : " + input.Text())
+		if input.Text() != ""{
+			sitesChannels[id] <- input.Text()
+			//fmt.Println("received : " + input.Text())
+		}
 	}
 }
