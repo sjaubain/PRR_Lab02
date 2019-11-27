@@ -5,9 +5,7 @@ import (
 	"strconv"
 )
 
-type algoCR struct{
-	nbreSite int         // nombre de sites de l'infrasctructure
-	id       int         // id du site
+type algoCR struct {
 	n        int         // nombre de processus
 	h	     int         // valeur courante de l'estampille
 	demCours bool        // faux/vrai quand le processus moi demande l'accès en SC
@@ -17,13 +15,9 @@ type algoCR struct{
 	pAtt[]   int         // ensemble des processus desquels je dois obtenir une permission
 }
 
-func New(nbreSite int, id int) algoCR {
-	acr := algoCR{nbreSite,id,0,0,false,false,0,[]int{},[]int{}}
+func New() algoCR {
+	acr := algoCR{0, 0, false, false, 0, []int{}, []int{}}
 	return acr
-}
-
-func (acr *algoCR) Init(deltaT int) {
-
 }
 
 func (acr algoCR) SendMsg(msgChannel chan <- string, msg string) {

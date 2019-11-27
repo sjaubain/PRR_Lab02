@@ -26,9 +26,8 @@ var (
 	connecting  = make(chan siteChannel)
 	// references to each site in order to process messages
 	sitesChannels = make(map[int]siteChannel)
+	acr = algoCR.New()
 )
-
-var acr algoCR
 
 /**
  * each time a process is strated, it tries to connect to each other
@@ -56,9 +55,6 @@ func main() {
 		}
 	}
 	
-	// Init algoCR
-    acr = algoCR.New(0, 0)
-	
 	go listen()
 	go lookUp()
 
@@ -84,7 +80,7 @@ func main() {
 		*/
 		
 		// test : juste envoyer au site 1
-		acr.SendMsg(sitesChannels[1], "Bonsoir")
+		acr.SendMsg(sitesChannels[1], msg)
 	}
 }
 
@@ -160,7 +156,7 @@ func reader(conn net.Conn, id int) {
 	for input.Scan() {
 		if input.Text() != ""{
 			acr.MsgHandle(sitesChannels[id], "j'ai bien recu ton message")
-			//fmt.Println("received : " + input.Text())
+			fmt.Println("received : " + input.Text())
 		}
 	}
 }
