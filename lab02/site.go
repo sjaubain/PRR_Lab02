@@ -24,7 +24,7 @@ var (
 	conf        Conf
 	connectedTo []bool
 	connecting  = make(chan siteChannel)
-	acr = algoCR.New()
+	acr         = algoCR.New()
 )
 
 /**
@@ -72,10 +72,10 @@ func main() {
 		cmd, _ := reader.ReadString('\n')
 
 		if cmd == "W\n" {
-		
 			acr.Ask()
-			
+
 		} else if cmd == "R\n" {
+			fmt.Println("value is " + strconv.Itoa(acr.GetValue()))
 		} else {
 			fmt.Println("unknown command " + cmd)
 		}

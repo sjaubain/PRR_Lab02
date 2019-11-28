@@ -1,15 +1,17 @@
 package algoCR
 
 import (
+	"fmt"
 	"math"
 	"strconv"
-	"fmt"
+	"strings"
 	"time"
 )
 
 type siteChannel chan<- string
 
 var sitesChannels  map[int]*chan<- string
+var sitesChannelsValue map[int]*chan<-int
 
 type algoCR struct {
 	id int
@@ -21,11 +23,14 @@ type algoCR struct {
 	pDiff  map[int]bool      // ensemble des numéros des processus pour lesquels on a différé le OK
 	pAtt   map[int]bool         // ensemble des processus desquels je dois obtenir une permission
 	askingSC chan bool
+	endAsk   chan bool
+	value    int
 }
 
 func New() algoCR {
-	acr := algoCR{0, 0, 0, false, false, 0, make(map[int]bool), make(map[int]bool), make(chan bool)}
+	acr := algoCR{0, 0, 0, false, false, 0, make(map[int]bool), make(map[int]bool), make(chan bool),make (chan bool), 0}
 	sitesChannels = make(map[int]*chan<- string)
+	sitesChannelsValue = make(map[int]*chan<-int)
 	return acr
 }
 
@@ -35,6 +40,7 @@ func (acr *algoCR) SetId(id int) {
 	acr.id = id
 	go acr.WaitSC()
 }
+
 
 func (acr *algoCR) AddChannel(ch chan<- string, id int) {
 	sitesChannels[id] = &ch
@@ -51,11 +57,34 @@ func (acr *algoCR) Ask() {
 	}
 	
 	acr.CheckSC()
+	<-acr.endAsk
+}
+
+func (acr *algoCR) SetInputValue(){
+	fmt.Println("Old Value : " + strconv.Itoa(acr.value))
+	fmt.Println("\nPlease enter the new value\n")
+	for{
+		_ , err := fmt.Scan(&acr.value)
+
+		if !(err == nil) {
+			fmt.Println("Enter a number\n")
+		} else {
+			fmt.Println("New Value : " + strconv.Itoa(acr.value))
+			break
+		}
+	}
+}
+func (acr *algoCR) SetValue(v int){
+	acr.value = v
+}
+
+func (acr *algoCR) GetValue() int{
+	return acr.value
 }
 
 // goroutine attente passive sur SC
 func (acr *algoCR) WaitSC() {
-	
+
 	for {
 		<- acr.askingSC
 		if len(acr.pAtt) == 0 { // pAtt vide
@@ -63,13 +92,19 @@ func (acr *algoCR) WaitSC() {
 			//SC
 			//Do something...
 			acr.sc = true
-			fmt.Println("ENTER SC*****************************")
-			time.Sleep(5 * time.Second)
-			fmt.Println("\n\n\n\n\nLEAVE SC*****************************")
+			fmt.Println("\n\n===================== ENTER SC =====================\n\n")
+			acr.SetInputValue()
+			time.Sleep(3 * time.Second)
+			fmt.Println("\n\n===================== LEAVE SC =====================\n\n")
 			
 			acr.h = acr.h + 1
 			acr.sc = false
 			acr.demCours = false
+
+			for i := range acr.pDiff{
+//				fmt.Println(i)
+				acr.ChangeValueSites(i,acr.id,acr.value)
+			}
 			
 			for i := range acr.pDiff {
 				acr.Ok(i, acr.id)
@@ -79,6 +114,10 @@ func (acr *algoCR) WaitSC() {
 			for j := range acr.pDiff {
 				delete(acr.pDiff, j)
 			}
+
+			// si on le fait pas, il revient au main et l input sera incorrect dans le main
+			acr.endAsk <- true
+			fmt.Println("voir si on arrive la")
 		}
 	}
 }
@@ -98,9 +137,16 @@ func (acr *algoCR) intToString(h int) string {
 	return ret
 }
 
+//Changement de valeur, il faut l'annoncer au autre site pour qu'ils puissent la changer
+func (acr *algoCR) ChangeValueSites(idTo int, idFrom int, value int ){
+	msg := "V" + strconv.Itoa(value)
+	acr.SendMsg(*sitesChannels[idTo],msg)
+}
+
 // OK
 func (acr *algoCR) Ok(idTo int, idFrom int) {
 	msg := "O" + acr.intToString(acr.h) + strconv.Itoa(idFrom)
+	time.Sleep(3 * time.Second)
 	acr.SendMsg(*sitesChannels[idTo], msg)
 }
 
@@ -118,32 +164,37 @@ func (acr *algoCR) SendMsg(msgChannel chan<- string, msg string) {
 func (acr *algoCR) MsgHandle(msg string) {
 
 	// extrait les parametres du message
-	op    := msg[0] // op : R ou O
-	hi, _ := strconv.Atoi(string(msg[1:4]))
-	i, _  := strconv.Atoi(string(msg[5]))
-	
-	// mise a jour de l'estampille
-	acr.h = int(math.Max(float64(acr.h) , float64(hi))) + 1
+	op    := msg[0] // op : R ou O ou V
 
-	// check le op 
-	if op == 'R' {
-	
-		if !acr.demCours {
-			acr.pAtt[i] = true
-			acr.Ok(i, acr.id)
-		} else {
-			
-			if acr.sc || (acr.hDem < hi) || (acr.hDem == hi && acr.id < i) {
-				acr.pDiff[i] = true
-			} else {
-				acr.Ok(i, acr.id)
+	// check le op
+	if op == 'R' || op == 'O'{
+		hi, _ := strconv.Atoi(string(msg[1:4]))
+		i, _  := strconv.Atoi(string(msg[5]))
+
+		// mise a jour de l'estampille
+		acr.h = int(math.Max(float64(acr.h) , float64(hi))) + 1
+		if op == 'R' {
+
+			if !acr.demCours {
 				acr.pAtt[i] = true
-				acr.Req(i, acr.id)
+				acr.Ok(i, acr.id)
+			} else {
+
+				if acr.sc || (acr.hDem < hi) || (acr.hDem == hi && acr.id < i) {
+					acr.pDiff[i] = true
+				} else {
+					acr.Ok(i, acr.id)
+					acr.pAtt[i] = true
+					acr.Req(i, acr.id)
+				}
 			}
-		}	
-	} else if op == 'O' {
-		delete(acr.pAtt, i)
-		acr.CheckSC()
+		} else if op == 'O' {
+			delete(acr.pAtt, i)
+			acr.CheckSC()
+		}
+	} else if op == 'V' {
+		val,_ := strconv.Atoi(strings.Trim(msg,"V"))
+		acr.SetValue(val)
 	}
 }
 
