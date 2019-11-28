@@ -11,7 +11,6 @@ import (
 type siteChannel chan<- string
 
 var sitesChannels  map[int]*chan<- string
-var sitesChannelsValue map[int]*chan<-int
 
 type algoCR struct {
 	id int
@@ -30,7 +29,6 @@ type algoCR struct {
 func New() algoCR {
 	acr := algoCR{0, 0, 0, false, false, 0, make(map[int]bool), make(map[int]bool), make(chan bool),make (chan bool), 0}
 	sitesChannels = make(map[int]*chan<- string)
-	sitesChannelsValue = make(map[int]*chan<-int)
 	return acr
 }
 
