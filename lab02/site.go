@@ -25,7 +25,7 @@ var (
 	connectedTo []bool
 	connecting  = make(chan siteChannel)
 	// references to each site in order to process messages
-	//sitesChannels = make(map[int]siteChannel)
+	sitesChannels = make(map[int]siteChannel)
 	acr = algoCR.New()
 )
 
@@ -75,6 +75,8 @@ func main() {
 
 		if cmd == "W\n" {
 		
+			acr.Ask()
+			//acr.SendMsg(sitesChannels[0], "caca")
 			
 		} else if cmd == "R\n" {
 		} else {
@@ -139,8 +141,8 @@ func connectToSite(id int) {
 func writer(conn net.Conn, id int) {
 
 	ch := make(chan string)
-	//sitesChannels[id] = ch
-	acr.AddChannel(ch, id)
+	sitesChannels[id] = ch
+	acr.AddChannel(sitesChannels[id], id)
 	connecting <- ch
 
 	go func() {

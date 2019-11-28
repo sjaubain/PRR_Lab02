@@ -3,9 +3,13 @@ package algoCR
 import (
 	"math"
 	"strconv"
+	"fmt"
+	"time"
 )
 
 type siteChannel chan<- string
+
+var sitesChannels  map[int]*chan<- string
 
 type algoCR struct {
 	id int
@@ -16,12 +20,12 @@ type algoCR struct {
 	hDem	 int         // estampille de soumission de cette demande
 	pDiff  map[int]bool      // ensemble des numéros des processus pour lesquels on a différé le OK
 	pAtt   map[int]bool         // ensemble des processus desquels je dois obtenir une permission
-	sitesChannels map[int]siteChannel
 	askingSC chan bool
 }
 
 func New() algoCR {
-	acr := algoCR{0, 0, 0, false, false, 0, make(map[int]bool), make(map[int]bool), make(map[int]siteChannel), make(chan bool)}
+	acr := algoCR{0, 0, 0, false, false, 0, make(map[int]bool), make(map[int]bool), make(chan bool)}
+	sitesChannels = make(map[int]*chan<- string)
 	go acr.WaitSC()
 	return acr
 }
@@ -31,7 +35,7 @@ func (acr *algoCR) SetId(id int) {
 }
 
 func (acr *algoCR) AddChannel(ch chan<- string, id int) {
-	acr.sitesChannels[id] = ch
+	sitesChannels[id] = &ch
 	acr.pAtt[id] = true
 }
 
@@ -41,7 +45,7 @@ func (acr algoCR) Ask() {
 	acr.hDem = acr.h
 	
 	for i := range acr.pAtt {
-		acr.Req(i)
+		acr.Req(i, acr.id)
 	}
 }
 
@@ -54,24 +58,41 @@ func (acr algoCR) WaitSC() {
 			
 			//SC
 			//Do something...
+			fmt.Println("ENTER SC*****************************")
+			time.Sleep(5 * time.Second)
+			fmt.Println("\n\n\nLEAVE SC*****************************")
+			
+			acr.h = acr.h + 1
+			acr.sc = false
+			acr.demCours = false
+			
+			for i := range acr.pDiff {
+				acr.Ok(i, acr.id)
+			}
+			
+			acr.pAtt = acr.pDiff
+			for j := range acr.pDiff {
+				delete(acr.pDiff, j)
+			}
 		}
 	}
 }
 
 // OK
-func (acr algoCR) Ok(i int) {
-	msg := "O" + strconv.Itoa(acr.h) + strconv.Itoa(i)
-	acr.SendMsg(acr.sitesChannels[i], msg)
+func (acr algoCR) Ok(idTo int, idFrom int) {
+	msg := "O" + strconv.Itoa(acr.h) + strconv.Itoa(idFrom)
+	acr.SendMsg(*sitesChannels[idTo], msg)
 }
 
 // REQ
-func (acr algoCR) Req(i int) {
-	msg := "R" + strconv.Itoa(acr.hDem) + strconv.Itoa(i)
-	acr.SendMsg(acr.sitesChannels[i], msg)
+func (acr algoCR) Req(idTo int, idFrom int) {
+	msg := "R" + strconv.Itoa(acr.hDem) + strconv.Itoa(idFrom)
+	acr.SendMsg(*sitesChannels[idTo], msg)
 }
 
-func (acr algoCR) SendMsg(msgChannel chan <- string, msg string) {
+func (acr algoCR) SendMsg(msgChannel chan<- string, msg string) {
 	msgChannel <- msg
+	fmt.Println("sent : " + msg)
 }
 
 func (acr algoCR) MsgHandle(msg string) {
@@ -87,16 +108,16 @@ func (acr algoCR) MsgHandle(msg string) {
 	if op == 'R' {
 	
 		if !acr.demCours {
-			acr.Ok(i)
+			acr.Ok(i, acr.id)
 			acr.pAtt[i] = true
 		} else {
 			
 			if acr.sc || (acr.hDem < hi) || (acr.hDem == hi && acr.id < i) {
 				acr.pDiff[i] = true
 			} else {
-				acr.Ok(i)
+				acr.Ok(i, acr.id)
 				acr.pAtt[i] = true
-				acr.Req(i)
+				acr.Req(i, acr.id)
 			}
 		}
 		
