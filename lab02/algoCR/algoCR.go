@@ -26,12 +26,14 @@ type algoCR struct {
 func New() algoCR {
 	acr := algoCR{0, 0, 0, false, false, 0, make(map[int]bool), make(map[int]bool), make(chan bool)}
 	sitesChannels = make(map[int]*chan<- string)
-	go acr.WaitSC()
 	return acr
 }
 
+// todo : trouver une meilleure facon d'initialiser
+// avec l'id et lancer la goroutine Wait a la creation du ACR
 func (acr *algoCR) SetId(id int) {
 	acr.id = id
+	go acr.WaitSC()
 }
 
 func (acr *algoCR) AddChannel(ch chan<- string, id int) {
@@ -39,7 +41,7 @@ func (acr *algoCR) AddChannel(ch chan<- string, id int) {
 	acr.pAtt[id] = true
 }
 
-func (acr algoCR) Ask() {
+func (acr *algoCR) Ask() {
 	acr.h = acr.h + 1
 	acr.demCours = true
 	acr.hDem = acr.h
@@ -47,10 +49,12 @@ func (acr algoCR) Ask() {
 	for i := range acr.pAtt {
 		acr.Req(i, acr.id)
 	}
+	
+	acr.CheckSC()
 }
 
 // goroutine attente passive sur SC
-func (acr algoCR) WaitSC() {
+func (acr *algoCR) WaitSC() {
 	
 	for {
 		<- acr.askingSC
@@ -58,10 +62,11 @@ func (acr algoCR) WaitSC() {
 			
 			//SC
 			//Do something...
+			acr.sc = true
 			fmt.Println("ENTER SC*****************************")
 			time.Sleep(5 * time.Second)
-			fmt.Println("\n\n\nLEAVE SC*****************************")
-			/*
+			fmt.Println("\n\n\n\n\nLEAVE SC*****************************")
+			
 			acr.h = acr.h + 1
 			acr.sc = false
 			acr.demCours = false
@@ -73,33 +78,33 @@ func (acr algoCR) WaitSC() {
 			acr.pAtt = acr.pDiff
 			for j := range acr.pDiff {
 				delete(acr.pDiff, j)
-			}*/
+			}
 		}
 	}
 }
 
-func (acr algoCR) CheckSC() {
+func (acr *algoCR) CheckSC() {
 	acr.askingSC <- true
 }
 
 // OK
-func (acr algoCR) Ok(idTo int, idFrom int) {
+func (acr *algoCR) Ok(idTo int, idFrom int) {
 	msg := "O" + strconv.Itoa(acr.h) + strconv.Itoa(idFrom)
 	acr.SendMsg(*sitesChannels[idTo], msg)
 }
 
 // REQ
-func (acr algoCR) Req(idTo int, idFrom int) {
+func (acr *algoCR) Req(idTo int, idFrom int) {
 	msg := "R" + strconv.Itoa(acr.hDem) + strconv.Itoa(idFrom)
 	acr.SendMsg(*sitesChannels[idTo], msg)
 }
 
-func (acr algoCR) SendMsg(msgChannel chan<- string, msg string) {
+func (acr *algoCR) SendMsg(msgChannel chan<- string, msg string) {
 	msgChannel <- msg
 	fmt.Println("sent : " + msg)
 }
 
-func (acr algoCR) MsgHandle(msg string) {
+func (acr *algoCR) MsgHandle(msg string) {
 
 	op    := msg[0] // op : R ou O
 	hi, _ := strconv.Atoi(string(msg[1]))
@@ -113,7 +118,6 @@ func (acr algoCR) MsgHandle(msg string) {
 	
 		if !acr.demCours {
 			acr.pAtt[i] = true
-			fmt.Println("*********FROM : " + strconv.Itoa(i))
 			acr.Ok(i, acr.id)
 		} else {
 			
@@ -127,6 +131,8 @@ func (acr algoCR) MsgHandle(msg string) {
 		}
 		
 	} else if op == 'O' {
+		delete(acr.pAtt, i)
+		acr.CheckSC()
 	}
 }
 
