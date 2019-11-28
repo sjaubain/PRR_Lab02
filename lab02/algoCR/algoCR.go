@@ -61,7 +61,7 @@ func (acr algoCR) WaitSC() {
 			fmt.Println("ENTER SC*****************************")
 			time.Sleep(5 * time.Second)
 			fmt.Println("\n\n\nLEAVE SC*****************************")
-			
+			/*
 			acr.h = acr.h + 1
 			acr.sc = false
 			acr.demCours = false
@@ -73,9 +73,13 @@ func (acr algoCR) WaitSC() {
 			acr.pAtt = acr.pDiff
 			for j := range acr.pDiff {
 				delete(acr.pDiff, j)
-			}
+			}*/
 		}
 	}
+}
+
+func (acr algoCR) CheckSC() {
+	acr.askingSC <- true
 }
 
 // OK
@@ -97,9 +101,9 @@ func (acr algoCR) SendMsg(msgChannel chan<- string, msg string) {
 
 func (acr algoCR) MsgHandle(msg string) {
 
-	op := int(msg[0]) // op : R ou O
-	hi := int(msg[1])
-	i  := int(msg[2])
+	op    := msg[0] // op : R ou O
+	hi, _ := strconv.Atoi(string(msg[1]))
+	i, _  := strconv.Atoi(string(msg[2]))
 	
 	// mise a jour de l'estampille
 	acr.h = int(math.Max(float64(acr.h) , float64(hi))) + 1
@@ -108,8 +112,9 @@ func (acr algoCR) MsgHandle(msg string) {
 	if op == 'R' {
 	
 		if !acr.demCours {
-			acr.Ok(i, acr.id)
 			acr.pAtt[i] = true
+			fmt.Println("*********FROM : " + strconv.Itoa(i))
+			acr.Ok(i, acr.id)
 		} else {
 			
 			if acr.sc || (acr.hDem < hi) || (acr.hDem == hi && acr.id < i) {
