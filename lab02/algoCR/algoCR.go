@@ -87,15 +87,26 @@ func (acr *algoCR) CheckSC() {
 	acr.askingSC <- true
 }
 
+// convertit l'heure locale en un string de 4 digit
+// pour la transmission 
+func (acr *algoCR) intToString(h int) string {
+	var ret string
+	ret += strconv.Itoa(h / 1000)
+	ret += strconv.Itoa(h % 1000 / 100)
+	ret += strconv.Itoa(h % 100 / 10)
+	ret += strconv.Itoa(h % 10)
+	return ret
+}
+
 // OK
 func (acr *algoCR) Ok(idTo int, idFrom int) {
-	msg := "O" + strconv.Itoa(acr.h) + strconv.Itoa(idFrom)
+	msg := "O" + acr.intToString(acr.h) + strconv.Itoa(idFrom)
 	acr.SendMsg(*sitesChannels[idTo], msg)
 }
 
 // REQ
 func (acr *algoCR) Req(idTo int, idFrom int) {
-	msg := "R" + strconv.Itoa(acr.hDem) + strconv.Itoa(idFrom)
+	msg := "R" + acr.intToString(acr.hDem) + strconv.Itoa(idFrom)
 	acr.SendMsg(*sitesChannels[idTo], msg)
 }
 
@@ -106,9 +117,10 @@ func (acr *algoCR) SendMsg(msgChannel chan<- string, msg string) {
 
 func (acr *algoCR) MsgHandle(msg string) {
 
+	// extrait les parametres du message
 	op    := msg[0] // op : R ou O
-	hi, _ := strconv.Atoi(string(msg[1]))
-	i, _  := strconv.Atoi(string(msg[2]))
+	hi, _ := strconv.Atoi(string(msg[1:4]))
+	i, _  := strconv.Atoi(string(msg[5]))
 	
 	// mise a jour de l'estampille
 	acr.h = int(math.Max(float64(acr.h) , float64(hi))) + 1
@@ -128,8 +140,7 @@ func (acr *algoCR) MsgHandle(msg string) {
 				acr.pAtt[i] = true
 				acr.Req(i, acr.id)
 			}
-		}
-		
+		}	
 	} else if op == 'O' {
 		delete(acr.pAtt, i)
 		acr.CheckSC()
