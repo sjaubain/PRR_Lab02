@@ -159,7 +159,7 @@ func reader(conn net.Conn, id int) {
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
 		if input.Text() != ""{
-			//fmt.Println("received : " + input.Text() + " from " + strconv.Itoa(id))
+			//mt.Println("received : " + input.Text() + " from " + strconv.Itoa(id))
 			acr.MsgHandle(input.Text())
 		}
 	}

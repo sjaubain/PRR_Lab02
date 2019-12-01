@@ -93,10 +93,6 @@ func (acr *algoCR) WaitSC() {
 			acr.SetInputValue()
 			time.Sleep(5 * time.Second)
 			fmt.Println("\n\n===================== LEAVE SC =====================\n\n")
-			
-			acr.h = acr.h + 1
-			acr.sc = false
-			acr.demCours = false
 
 			for i := range sitesChannels {
 				acr.ChangeValueSites(i, acr.id, acr.value)
@@ -116,6 +112,10 @@ func (acr *algoCR) WaitSC() {
 				delete(acr.pDiff, j)
 			}
 
+			acr.h = acr.h + 1
+			acr.sc = false
+			acr.demCours = false
+			
 			// si on le fait pas, il revient au main et l input sera incorrect dans le main
 			acr.endAsk <- true
 		}
@@ -167,7 +167,8 @@ func (acr *algoCR) MsgHandle(msg string) {
 
 	// check le op
 	if op == 'R' || op == 'O'{
-		hi, _ := strconv.Atoi(string(msg[1:4]))
+	
+		hi, _ := strconv.Atoi(string(msg[1:5]))
 		i, _  := strconv.Atoi(string(msg[5]))
 
 		// mise a jour de l'estampille
