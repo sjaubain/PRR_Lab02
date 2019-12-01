@@ -34,7 +34,7 @@ func New() algoCR {
 
 // todo : trouver une meilleure facon d'initialiser
 // avec l'id et lancer la goroutine Wait a la creation du ACR
-func (acr *algoCR) SetId(id int) {
+func (acr *algoCR) Start(id int) {
 	acr.id = id
 	go acr.WaitSC()
 }
@@ -55,17 +55,16 @@ func (acr *algoCR) Ask() {
 	}
 	
 	acr.CheckSC()
-	<-acr.endAsk
+	<- acr.endAsk
 }
 
 func (acr *algoCR) SetInputValue(){
-	fmt.Println("Old Value : " + strconv.Itoa(acr.value))
-	fmt.Println("\nPlease enter the new value\n")
+	fmt.Println("Old Value : " + strconv.Itoa(acr.value) + " Please enter the new value :")
 	for{
 		_ , err := fmt.Scan(&acr.value)
 
-		if !(err == nil) {
-			fmt.Println("Enter a number\n")
+		if err != nil {
+			fmt.Println("Enter a number :")
 		} else {
 			fmt.Println("New Value : " + strconv.Itoa(acr.value))
 			break
@@ -92,30 +91,33 @@ func (acr *algoCR) WaitSC() {
 			acr.sc = true
 			fmt.Println("\n\n===================== ENTER SC =====================\n\n")
 			acr.SetInputValue()
-			time.Sleep(3 * time.Second)
+			time.Sleep(5 * time.Second)
 			fmt.Println("\n\n===================== LEAVE SC =====================\n\n")
 			
 			acr.h = acr.h + 1
 			acr.sc = false
 			acr.demCours = false
 
-			for i := range acr.pDiff{
-//				fmt.Println(i)
-				acr.ChangeValueSites(i,acr.id,acr.value)
+			for i := range sitesChannels {
+				acr.ChangeValueSites(i, acr.id, acr.value)
 			}
 			
 			for i := range acr.pDiff {
 				acr.Ok(i, acr.id)
 			}
 			
-			acr.pAtt = acr.pDiff
+			// pAtt = pDiff, first clear pAtt then set pDiff finally clear pDiff
+			for j := range acr.pAtt {
+				delete(acr.pAtt, j)
+			}
+			
 			for j := range acr.pDiff {
+				acr.pAtt[j] = true
 				delete(acr.pDiff, j)
 			}
 
 			// si on le fait pas, il revient au main et l input sera incorrect dans le main
 			acr.endAsk <- true
-			fmt.Println("voir si on arrive la")
 		}
 	}
 }
@@ -136,7 +138,7 @@ func (acr *algoCR) intToString(h int) string {
 }
 
 //Changement de valeur, il faut l'annoncer au autre site pour qu'ils puissent la changer
-func (acr *algoCR) ChangeValueSites(idTo int, idFrom int, value int ){
+func (acr *algoCR) ChangeValueSites(idTo int, idFrom int, value int ) {
 	msg := "V" + strconv.Itoa(value)
 	acr.SendMsg(*sitesChannels[idTo],msg)
 }
@@ -144,7 +146,6 @@ func (acr *algoCR) ChangeValueSites(idTo int, idFrom int, value int ){
 // OK
 func (acr *algoCR) Ok(idTo int, idFrom int) {
 	msg := "O" + acr.intToString(acr.h) + strconv.Itoa(idFrom)
-	time.Sleep(3 * time.Second)
 	acr.SendMsg(*sitesChannels[idTo], msg)
 }
 
@@ -156,13 +157,13 @@ func (acr *algoCR) Req(idTo int, idFrom int) {
 
 func (acr *algoCR) SendMsg(msgChannel chan<- string, msg string) {
 	msgChannel <- msg
-	fmt.Println("sent : " + msg)
+	//fmt.Println("sent : " + msg)
 }
 
 func (acr *algoCR) MsgHandle(msg string) {
 
 	// extrait les parametres du message
-	op    := msg[0] // op : R ou O ou V
+	op := msg[0] // op : R ou O ou V
 
 	// check le op
 	if op == 'R' || op == 'O'{
@@ -191,7 +192,7 @@ func (acr *algoCR) MsgHandle(msg string) {
 			acr.CheckSC()
 		}
 	} else if op == 'V' {
-		val,_ := strconv.Atoi(strings.Trim(msg,"V"))
+		val,_ := strconv.Atoi(strings.Trim(msg, "V"))
 		acr.SetValue(val)
 	}
 }

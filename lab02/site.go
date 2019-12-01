@@ -8,7 +8,7 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"time"
+	"sync"
 	"PRR_Lab02/lab02/algoCR"
 )
 
@@ -25,6 +25,7 @@ var (
 	connectedTo []bool
 	connecting  = make(chan siteChannel)
 	acr         = algoCR.New()
+	mutex		sync.Mutex // to protect concurrency acces to connectedTo tab
 )
 
 /**
@@ -54,10 +55,10 @@ func main() {
 	}
 	
 	// set id
-	acr.SetId(siteId)
+	acr.Start(siteId)
 	
-	go listen()
 	go lookUp()
+	go listen()
 
 	// wait for all sites to be running (connected)
 	for i := 0; i < conf.NB_SITES-1; i++ {
@@ -72,6 +73,7 @@ func main() {
 		cmd, _ := reader.ReadString('\n')
 
 		if cmd == "W\n" {
+		
 			acr.Ask()
 
 		} else if cmd == "R\n" {
@@ -92,10 +94,12 @@ func loadConfiguration() {
 // try to connect to each site
 func lookUp() {
 	for id, _ := range conf.SITES_ADDR {
+		mutex.Lock()
 		// should not connect to myself
 		if id != siteId {
 			connectToSite(id)
 		}
+		mutex.Unlock()
 	}
 }
 
@@ -111,21 +115,23 @@ func listen() {
 		_, _ = conn.Read(buf)
 		id, _ := strconv.Atoi(string(buf[0]))
 
+		mutex.Lock()
 		if !connectedTo[id] {
 			connectToSite(id)
 		}
+		mutex.Unlock()
 
 		go reader(conn, id)
-		time.Sleep(1000)
 	}
 }
 
 func connectToSite(id int) {
 
 	conn, err := net.Dial("tcp", conf.SITES_ADDR[id])
-
+	
 	if err == nil {
 		connectedTo[id] = true
+		
 		log.Println("i am connected to site " + strconv.Itoa(id))
 
 		// send its id
@@ -153,7 +159,7 @@ func reader(conn net.Conn, id int) {
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
 		if input.Text() != ""{
-			fmt.Println("received : " + input.Text() + " from " + strconv.Itoa(id))
+			//fmt.Println("received : " + input.Text() + " from " + strconv.Itoa(id))
 			acr.MsgHandle(input.Text())
 		}
 	}
