@@ -68,9 +68,9 @@ func main() {
 	}
 
 	fmt.Println("\nall sites connected, now able to accept user commands")
-	fmt.Println("Enter text: [R (Read) | W (Write)]\n\n")
 	reader := bufio.NewReader(os.Stdin)
 	for {
+		fmt.Println("\nEnter text: [R (Read) | W (Write)]\n")
 
 		cmd, _ := reader.ReadString('\n')
 

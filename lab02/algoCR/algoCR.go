@@ -25,7 +25,6 @@ type algoCR struct {
 	askingSC chan bool    // channel to communicate between SC goroutine and main context
 	endAsk   chan bool    // channel to inform end of SC
 	value    int          // global shared value
-	debug    bool         // true / false if we want to see exchanged messages
 }
 
 func New() algoCR {
@@ -33,7 +32,7 @@ func New() algoCR {
 		make(map[int]bool),
 		make(map[int]bool),
 		make(chan bool),
-		make(chan bool), 0, false}
+		make(chan bool), 0}
 
 	sitesChannels = make(map[int]*chan<- string)
 	return acr
@@ -67,14 +66,14 @@ func (acr *algoCR) Ask() {
  * change global shared value
  */
 func (acr *algoCR) SetInputValue() {
-	fmt.Println("Old Value : " + strconv.Itoa(acr.value) + " Please enter the new value :")
+	fmt.Println("Old Value : " + strconv.Itoa(acr.value) + "\nPlease enter the new value :")
 	for {
 		_, err := fmt.Scan(&acr.value)
 
 		if err != nil {
-			fmt.Println("Enter a number :")
+			fmt.Println("\nEnter a number :")
 		} else {
-			fmt.Println("New Value : " + strconv.Itoa(acr.value))
+			fmt.Println("\nNew Value : " + strconv.Itoa(acr.value))
 			break
 		}
 	}
@@ -162,18 +161,12 @@ func (acr *algoCR) Req(idTo int, idFrom int) {
 
 func (acr *algoCR) SendMsg(msgChannel chan<- string, msg string) {
 	msgChannel <- msg
-
-	if acr.debug {
-		fmt.Println("sent : " + msg)
-	}
+	fmt.Println("sent : " + msg)
 }
 
 func (acr *algoCR) MsgHandle(msg string) {
 
-	if acr.debug {
-		fmt.Println("received : " + msg)
-	}
-
+	fmt.Println("received : " + msg)
 	// extract payload parameters
 	op := msg[0] // op : R | O | V
 
@@ -208,4 +201,5 @@ func (acr *algoCR) MsgHandle(msg string) {
 		val, _ := strconv.Atoi(strings.Trim(msg, "V"))
 		acr.SetValue(val)
 	}
+
 }
