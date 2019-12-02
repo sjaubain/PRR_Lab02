@@ -19,7 +19,7 @@ Dans le cadre de ce laboratoire, l'état en section critique consiste uniquement
 
 ## Configuration
 
-Un fichier Json contenant le nombre de sites ainsi que leurs adresses permet de configurer comme on le souhaite l'architecture des differents processus. Par défaut, toutes les addresses IP sont *localhost*, puisqu'on fait tourner tous les sites localement.
+Un fichier Json contenant le nombre de sites ainsi que leurs adresses permet de configurer comme on le souhaite l'architecture des differents processus. Par défaut, toutes les addresses IP sont *localhost*, puisqu'on fait tourner tous les sites localement. Il est donc possible de changer ce fichier de configuration et d'ajouter d'autres sites (local ou remote) selon leur répartition.
 
 ## Utilisation
 
