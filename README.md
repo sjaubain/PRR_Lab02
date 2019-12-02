@@ -23,7 +23,7 @@ Un fichier Json contenant le nombre de sites ainsi que leurs adresses permet de 
 
 ## Utilisation
 
-Tout d'abord, cloner le repository [https://github.com/sjaubain/PRR_Lab02] quelque part depuis le GOPATH. Pour lancer les différents sites, il faut ouvrir un terminal où se situe le fichier `site.go` puis lancer la commande suivante pour construire l'exécutable :
+Tout d'abord, cloner le repository https://github.com/sjaubain/PRR_Lab02 quelque part depuis le GOPATH. Pour lancer les différents sites, il faut ouvrir un terminal où se situe le fichier `site.go` puis lancer la commande suivante pour construire l'exécutable :
 
 ```bash
 go build site.go
@@ -36,3 +36,5 @@ Ouvrir ensuite autant de terminal qu'il y a de sites configurés (par défaut 3)
 ```
 
 Une fois que tous sites seront lancés et interconnectés, il suffit comme cité précédemment d'entrer les commandes `W` ou `R` pour changer la valeur de la variable partagée ou la consulter.
+
+Remarque : pour observer le trafic sur le réseau, il est possibe de mettre la variable *debug* dans `algoCR` à true de manière à afficher les messages envoyés et reçus.

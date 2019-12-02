@@ -11,29 +11,30 @@ import (
 type siteChannel chan<- string
 
 // references to all other process channels
-var sitesChannels  map[int]*chan<- string
+var sitesChannels map[int]*chan<- string
 
 type algoCR struct {
-	id 		 int		  // current process id
+	id       int          // current process id
 	n        int          // number of process
-	h	     int          // current stamp value
+	h        int          // current stamp value
 	demCours bool         // true / false if I have asked for SC
-	sc		 bool         // true / false if I am in SC
-	hDem	 int          // SC asking stamp
-	pDiff    map[int]bool // set of process for which we differ the OK 
+	sc       bool         // true / false if I am in SC
+	hDem     int          // SC asking stamp
+	pDiff    map[int]bool // set of process for which we differ the OK
 	pAtt     map[int]bool // set of process for which I need to wait the OK
-	askingSC chan bool	  // channel to communicate between SC goroutine and main context
+	askingSC chan bool    // channel to communicate between SC goroutine and main context
 	endAsk   chan bool    // channel to inform end of SC
-	value    int		  // global shared value
+	value    int          // global shared value
+	debug    bool         // true / false if we want to see exchanged messages
 }
 
 func New() algoCR {
-	acr := algoCR{0, 0, 0, false, false, 0, 
-				  make(map[int]bool), 
-				  make(map[int]bool), 
-				  make(chan bool),
-				  make (chan bool), 0}
-				  
+	acr := algoCR{0, 0, 0, false, false, 0,
+		make(map[int]bool),
+		make(map[int]bool),
+		make(chan bool),
+		make(chan bool), 0, false}
+
 	sitesChannels = make(map[int]*chan<- string)
 	return acr
 }
@@ -42,7 +43,6 @@ func (acr *algoCR) Start(id int) {
 	acr.id = id
 	go acr.WaitSC()
 }
-
 
 func (acr *algoCR) AddChannel(ch chan<- string, id int) {
 	sitesChannels[id] = &ch
@@ -53,19 +53,23 @@ func (acr *algoCR) Ask() {
 	acr.h = acr.h + 1
 	acr.demCours = true
 	acr.hDem = acr.h
-	
+
 	for i := range acr.pAtt {
 		acr.Req(i, acr.id)
 	}
-	
+
 	acr.CheckSC()
-	<- acr.endAsk
+	<-acr.endAsk
 }
 
-func (acr *algoCR) SetInputValue(){
+/**
+ * function executed in critical section to
+ * change global shared value
+ */
+func (acr *algoCR) SetInputValue() {
 	fmt.Println("Old Value : " + strconv.Itoa(acr.value) + " Please enter the new value :")
-	for{
-		_ , err := fmt.Scan(&acr.value)
+	for {
+		_, err := fmt.Scan(&acr.value)
 
 		if err != nil {
 			fmt.Println("Enter a number :")
@@ -75,7 +79,8 @@ func (acr *algoCR) SetInputValue(){
 		}
 	}
 }
-func (acr *algoCR) SetValue(v int){
+
+func (acr *algoCR) SetValue(v int) {
 	acr.value = v
 }
 
@@ -83,15 +88,15 @@ func (acr *algoCR) GetValue() int {
 	return acr.value
 }
 
-/** 
+/**
  * goroutine for passive waiting on SC
  */
 func (acr *algoCR) WaitSC() {
 
 	for {
-		<- acr.askingSC
-		if len(acr.pAtt) == 0 { 
-			
+		<-acr.askingSC
+		if len(acr.pAtt) == 0 {
+
 			acr.sc = true
 			fmt.Println("\n\n===================== ENTER SC =====================\n\n")
 			acr.SetInputValue()
@@ -101,12 +106,12 @@ func (acr *algoCR) WaitSC() {
 			for i := range sitesChannels {
 				acr.ChangeValueSites(i, acr.id, acr.value)
 			}
-			
+
 			// pAtt = pDiff, first clear pAtt then set pDiff finally clear pDiff
 			for j := range acr.pAtt {
 				delete(acr.pAtt, j)
 			}
-			
+
 			for j := range acr.pDiff {
 				acr.pAtt[j] = true
 				acr.Ok(j, acr.id)
@@ -116,7 +121,7 @@ func (acr *algoCR) WaitSC() {
 			acr.h = acr.h + 1
 			acr.sc = false
 			acr.demCours = false
-			
+
 			// needed to wait to go back to main
 			acr.endAsk <- true
 		}
@@ -127,9 +132,9 @@ func (acr *algoCR) CheckSC() {
 	acr.askingSC <- true
 }
 
-/** 
+/**
  * convert local time to 4 digit string
- * in order to transmit it in payloads 
+ * in order to transmit it in payloads
  */
 func (acr *algoCR) intToString(h int) string {
 	var ret string
@@ -139,10 +144,10 @@ func (acr *algoCR) intToString(h int) string {
 	ret += strconv.Itoa(h % 10)
 	return ret
 }
- 
-func (acr *algoCR) ChangeValueSites(idTo int, idFrom int, value int ) {
+
+func (acr *algoCR) ChangeValueSites(idTo int, idFrom int, value int) {
 	msg := "V" + strconv.Itoa(value)
-	acr.SendMsg(*sitesChannels[idTo],msg)
+	acr.SendMsg(*sitesChannels[idTo], msg)
 }
 
 func (acr *algoCR) Ok(idTo int, idFrom int) {
@@ -157,21 +162,28 @@ func (acr *algoCR) Req(idTo int, idFrom int) {
 
 func (acr *algoCR) SendMsg(msgChannel chan<- string, msg string) {
 	msgChannel <- msg
-	//fmt.Println("sent : " + msg)
+
+	if acr.debug {
+		fmt.Println("sent : " + msg)
+	}
 }
 
 func (acr *algoCR) MsgHandle(msg string) {
 
+	if acr.debug {
+		fmt.Println("received : " + msg)
+	}
+
 	// extract payload parameters
 	op := msg[0] // op : R | O | V
 
-	if op == 'R' || op == 'O'{
-	
+	if op == 'R' || op == 'O' {
+
 		hi, _ := strconv.Atoi(string(msg[1:5]))
-		i, _  := strconv.Atoi(string(msg[5]))
+		i, _ := strconv.Atoi(string(msg[5]))
 
 		// update stamp
-		acr.h = int(math.Max(float64(acr.h) , float64(hi))) + 1
+		acr.h = int(math.Max(float64(acr.h), float64(hi))) + 1
 		if op == 'R' {
 
 			if !acr.demCours {
@@ -187,15 +199,13 @@ func (acr *algoCR) MsgHandle(msg string) {
 					acr.Req(i, acr.id)
 				}
 			}
-			
+
 		} else if op == 'O' {
 			delete(acr.pAtt, i)
 			acr.CheckSC()
 		}
 	} else if op == 'V' {
-		val,_ := strconv.Atoi(strings.Trim(msg, "V"))
+		val, _ := strconv.Atoi(strings.Trim(msg, "V"))
 		acr.SetValue(val)
 	}
 }
-
-
