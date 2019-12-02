@@ -25,7 +25,7 @@ var (
 	connectedTo []bool
 	connecting  = make(chan siteChannel)
 	acr         = algoCR.New()
-	mutex		sync.Mutex // to protect concurrency acces to connectedTo tab
+	mutex		sync.Mutex // to protect concurrent acces to connectedTo tab
 )
 
 /**
@@ -54,7 +54,7 @@ func main() {
 		}
 	}
 	
-	// set id
+	// set id and start main loop of acr
 	acr.Start(siteId)
 	
 	go lookUp()
@@ -73,9 +73,7 @@ func main() {
 		cmd, _ := reader.ReadString('\n')
 
 		if cmd == "W\n" {
-		
 			acr.Ask()
-
 		} else if cmd == "R\n" {
 			fmt.Println("value is " + strconv.Itoa(acr.GetValue()))
 		} else {
