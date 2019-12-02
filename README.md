@@ -15,11 +15,21 @@ Le programme fonctionne en deux temps : tout d'abord, tous les sites doivent att
 
 Une fois que la première étape est terminée, l'utilisateur a la possibilité d'entrer les commandes `W` (Write) et `R` (Read) pour soit changer la valeur partagée soit la consulter. Le site intègre une partie gérant l'exclusion mutuelle et implémente l'algorithme de Carvalho et Roucairol pour la gestion de la section critique. L'affichage de l'ancienne valeur et de la nouvelle, entrée par l'utilisateur, ainsi qu'une visualisation de l'entrée et sortie de la section critique (avec l'ajout d'un temps long de traitement artificiel pour des raisons de clarté) permettent d'observer le bon fonctionnement du traitement.
 
-Dans le cadre de ce laboratoire, l'état en section critique consiste uniquement en un changement de la valeur d'une variable cohérente et partagée par tous les sites, par le biais de la fonction *setInputValue* du fichier `algoCR.go` mais on pourrait très bien remplacer cela par un traitement plus complexe dans le cadre d'une autre application
+Dans le cadre de ce laboratoire, l'état en section critique consiste uniquement en un changement de la valeur d'une variable cohérente et partagée par tous les sites, par le biais de la fonction *setInputValue* du fichier `algoCR.go` mais on pourrait très bien remplacer cela par un traitement plus complexe dans le cadre d'une autre application.
 
 ## Configuration
 
 Un fichier Json contenant le nombre de sites ainsi que leurs adresses permet de configurer comme on le souhaite l'architecture des differents processus. Par défaut, toutes les addresses IP sont *localhost*, puisqu'on fait tourner tous les sites localement. Il est donc possible de changer ce fichier de configuration et d'ajouter d'autres sites (local ou remote) selon leur répartition.
+
+Pour ce laboratoire, nous avons décidé d'attribuer les identifiants des sites avec des valeurs comprises entre *0* et *n-1*, où *n* est le nombre de sites. On pourrait très bien attribuer des identifiants quelconques, puisque les structures de données utilisées pour traiter les sites dans `algoCR.go` sont des map et non des tableaux statiques. Comme on suppose dans la donnée que tous les sites sont lancés une et une seule fois et que le réseau est fiable, une telle représentation est adéquate.
+
+Nous avons par conséquent choisi de construire tous les payloads envoyés de la manière suivante :
+
+* **byte 1** : opcode `R`, `W` ou `V`
+* **bytes 2 à 5** : estampille (sans perte de généralité, choix d'une estampille sur 4 digits)
+* **byte 6** : id
+
+Notons que le `V` est utilisé lorsque l'on désire informer les autres sites d'un changement de la valeur partagée.
 
 ## Utilisation
 
@@ -29,7 +39,7 @@ Tout d'abord, cloner le repository https://github.com/sjaubain/PRR_Lab02 quelque
 go build site.go
 ```
 
-Ouvrir ensuite autant de terminal qu'il y a de sites configurés (par défaut 3) et les lancer avec leur identifiant en argument. Par exemple :
+Ouvrir ensuite autant de terminal qu'il y a de sites configurés (par défaut 3) et les lancer avec leur identifiant en argument. Le numéro du site doit être entre *0* et *n-1*, où *n* est le nombre de sites. Par exemple :
 
 ```bash
 ./site 0
