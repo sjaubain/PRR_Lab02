@@ -6,7 +6,7 @@ Auteurs: Jobin Simon, Teklehaimanot Robel
 
 Partager une donnée parmi un ensemble de processus est un problème qui peut se résoudre par le biais d'un algorithme d'exclusion mutuelle. Dans ce laboratoire, nous allons utiliser l’algorithme de Carvalho et Roucairol, une optimisation de l’algorithme de Ricart et Agrawala, comme algorithme d’exclusion mutuelle.  Chaque processus détient une variable entière qui doit être cohérente. Les tâches applicatives peuvent faire 2 opérations sur cette variable : consulter sa valeur, et modifier sa valeur. La consultation revient à obtenir la valeur la plus récente. Par contre, une modification se passe en 3 étapes :
 
-- **obtenir l'exclusion mutuelle sur la variable  **
+- **obtenir l'exclusion mutuelle sur la variable**
 - **modifier la valeur en section critique, par exemple l’incrémenter**
 - **informer tous les autres processus de la nouvelle valeur**
 - **libérer la section critique**
@@ -23,7 +23,7 @@ Dans le cadre de ce laboratoire, l'état en section critique consiste uniquement
 
 Un fichier Json contenant le nombre de sites ainsi que leurs adresses permet de configurer comme on le souhaite l'architecture des differents processus. Par défaut, toutes les addresses IP sont *localhost*, puisqu'on fait tourner tous les sites localement. Il est donc possible de changer ce fichier de configuration et d'ajouter d'autres sites (local ou remote) selon leur répartition.
 
-Pour ce laboratoire, nous avons décidé d'attribuer les identifiants des sites avec des valeurs comprises entre *0* et *n-1*, où *n* est le nombre de sites. On pourrait très bien attribuer des identifiants quelconques, puisque les structures de données utilisées pour traiter les sites dans `algoCR.go` sont des map et non des tableaux statiques. Comme on suppose dans la donnée que tous les sites sont lancés une et une seule fois et que le réseau est fiable, une telle représentation est adéquate.
+Pour ce laboratoire, nous avons décidé d'attribuer les identifiants des sites avec des valeurs comprises entre *0* et *n-1*, où *n* est le nombre de sites. On pourrait très bien attribuer des identifiants quelconques, puisque les structures de données utilisées pour traiter les sites dans `algoCR.go` sont des map et non des tableaux statiques. Comme on suppose dans la donnée que tous les sites sont lancés une et une seule fois et que le réseau est fiable, notre représentation est adéquate.
 
 Nous avons par conséquent choisi de construire tous les payloads envoyés de la manière suivante :
 
@@ -48,5 +48,3 @@ Ouvrir ensuite autant de terminal qu'il y a de sites configurés (par défaut 3)
 ```
 
 Une fois que tous sites seront lancés et interconnectés, il suffit comme cité précédemment d'entrer les commandes `W` ou `R` pour changer la valeur de la variable partagée ou la consulter.
-
-Remarque : pour observer le trafic sur le réseau, il est possibe de mettre la variable *debug* dans `algoCR` à true de manière à afficher les messages envoyés et reçus.
