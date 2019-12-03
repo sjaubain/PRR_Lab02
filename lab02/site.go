@@ -1,3 +1,10 @@
+/**
+site.go
+Author: Simon Jobin, Robel Teklehaimanot
+Date  : 04.12.2019
+Goal  : it's the part client and network, connect with others site. Listen, send message ...
+**/
+
 package main
 
 import (
@@ -72,8 +79,10 @@ func main() {
 	for {
 		fmt.Println("\nEnter text: [R (Read) | W (Write)]\n")
 
+		// read the input of the user
 		cmd, _ := reader.ReadString('\n')
 
+		// if W, the site do an ask
 		if cmd == "W\n" {
 			acr.Ask()
 		} else if cmd == "R\n" {
@@ -106,6 +115,7 @@ func lookUp() {
 
 func listen() {
 
+	// listen all site
 	listener, _ := net.Listen("tcp", conf.SITES_ADDR[siteId])
 
 	for {

@@ -1,3 +1,11 @@
+/**
+algoCR.go
+Author: Simon Jobin, Robel Teklehaimanot
+Date  : 04.12.2019
+Goal  : it's the part Mutex, use the Carvalho et Roucairol algorithm
+**/
+
+
 package algoCR
 
 import (
@@ -27,6 +35,7 @@ type algoCR struct {
 	value    int          // global shared value
 }
 
+// Construct the objet mutex
 func New() algoCR {
 	acr := algoCR{0, 0, 0, false, false, 0,
 		make(map[int]bool),
@@ -37,6 +46,7 @@ func New() algoCR {
 	sitesChannels = make(map[int]*chan<- string)
 	return acr
 }
+
 
 func (acr *algoCR) Start(id int) {
 	acr.id = id
@@ -93,7 +103,7 @@ func (acr *algoCR) GetValue() int {
 func (acr *algoCR) WaitSC() {
 
 	for {
-		<-acr.askingSC
+		<-acr.askingSC // all site wait here until one of them ask to enter in SC
 		if len(acr.pAtt) == 0 {
 
 			acr.sc = true
