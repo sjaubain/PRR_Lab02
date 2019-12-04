@@ -19,6 +19,8 @@ Une fois que la première étape est terminée, l'utilisateur a la possibilité 
 
 Dans le cadre de ce laboratoire, l'état en section critique consiste uniquement en un changement de la valeur d'une variable cohérente et partagée par tous les sites, par le biais de la fonction *setInputValue* du fichier `algoCR.go` mais on pourrait très bien remplacer cela par un traitement plus complexe dans le cadre d'une autre application.
 
+La communication au sein de la partie mutex s'effectue par le biais des channels du programme principal. En effet, à chaque connexion, on crée un channel qui permettra à la fonction *writer* de "consommer" ce channel et d'envoyer le contenu sur la connexion. On passe ensuite l'adresse de ce channel à `algoCR`, de manière à ce qu'il puisse écrire dedans au bon moment et que l'envoi sur le réseau depuis le main se fasse.
+
 ## Configuration
 
 Un fichier Json contenant le nombre de sites ainsi que leurs adresses permet de configurer comme on le souhaite l'architecture des differents processus. Par défaut, toutes les addresses IP sont *localhost*, puisqu'on fait tourner tous les sites localement. Il est donc possible de changer ce fichier de configuration et d'ajouter d'autres sites (local ou remote) selon leur répartition.
