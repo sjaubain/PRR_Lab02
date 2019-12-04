@@ -50,3 +50,7 @@ Ouvrir ensuite autant de terminal qu'il y a de sites configurés (par défaut 3)
 ```
 
 Une fois que tous sites seront lancés et interconnectés, il suffit comme cité précédemment d'entrer les commandes `W` ou `R` pour changer la valeur de la variable partagée ou la consulter.
+
+## Amélioration possible
+
+On pourrait séparer la partie réseau du reste du site de manière à la réutiliser dans un éventuel autre programme nécessitant de connecter plusieurs sites entre eux. Ici, le programme est relativement petit et nous avons donc intégrer la partie réseau directement au site pour ne pas avoir à définir des setters et getters supplémentaires.
